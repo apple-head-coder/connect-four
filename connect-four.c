@@ -1,7 +1,7 @@
 #include "connect-four.h"
 #include <stdlib.h>
 
-// int calls = 0;
+// long long calls = 0;
 
 int main() {
     grid_t grid = {0};
@@ -47,7 +47,7 @@ int grid_best_move(grid_t *grid, player_t player) {
 }
 
 int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_out) {
-    // if (++calls % 10000000 == 0) { printf("minimax calls: %d\n", calls); print_grid(grid); }
+    // if (++calls % 100000000ll == 0ll) { printf("minimax calls: %lld\n", calls); print_grid(grid); }
     switch (grid_get_winner(grid)) {
         case RED: return EVAL_MAX;
         case YELLOW: return EVAL_MIN;
@@ -58,32 +58,32 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
 
     if (player == RED) {
         for (int move = 0; move < 7; move++) {
+            if (alpha >= EVAL_MAX - 1) { break; }
             if (grid->tops[move] >= 6) { continue; }
             
             grid_play(grid, player, move);
-            int eval = minimax(grid, YELLOW, inc_mag(alpha), EVAL_MAX + 1, NULL);
+            int eval = minimax(grid, YELLOW, inc_mag(alpha), inc_mag(beta), NULL);
             eval = dec_mag(eval);
             grid_unplay(grid, move);
             
             if (eval >= beta) { return beta; }
             if (eval > alpha) { alpha = eval; best_move = move; }
-            if (eval >= EVAL_MAX - 1) { break; }
         }
 
         if (best_move_out) { *best_move_out = best_move; }
         return alpha;
     } else {
         for (int move = 0; move < 7; move++) {
+            if (beta <= EVAL_MIN + 1) { break; }
             if (grid->tops[move] >= 6) { continue; }
             
             grid_play(grid, player, move);
-            int eval = minimax(grid, RED, EVAL_MIN - 1, inc_mag(beta), NULL);
+            int eval = minimax(grid, RED, inc_mag(alpha), inc_mag(beta), NULL);
             eval = dec_mag(eval);
             grid_unplay(grid, move);
             
             if (eval <= alpha) { return alpha; }
             if (eval < beta) { beta = eval; best_move = move; }
-            if (eval <= EVAL_MIN + 1) { break; }
         }
         
         if (best_move_out) { *best_move_out = best_move; }
