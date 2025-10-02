@@ -1,4 +1,7 @@
 #include "connect-four.h"
+#include <stdlib.h>
+
+// int calls = 0;
 
 int main() {
     grid_t grid = {0};
@@ -38,8 +41,53 @@ int main() {
 }
 
 int grid_best_move(grid_t *grid, player_t player) {
-    for (int i = 0; i < 7; i++) {
-        if (grid->tops[i] < 6) { return i; }
+    int best_move;
+    minimax(grid, player, EVAL_MIN - 1, EVAL_MAX + 1, &best_move);
+    return best_move;
+}
+
+int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_out) {
+    // if (++calls % 10000000 == 0) { printf("minimax calls: %d\n", calls); print_grid(grid); }
+    switch (grid_get_winner(grid)) {
+        case RED: return EVAL_MAX;
+        case YELLOW: return EVAL_MIN;
+        case DRAW: return 0;
+    }
+
+    int best_move;
+
+    if (player == RED) {
+        for (int move = 0; move < 7; move++) {
+            if (grid->tops[move] >= 6) { continue; }
+            
+            grid_play(grid, player, move);
+            int eval = minimax(grid, YELLOW, inc_mag(alpha), EVAL_MAX + 1, NULL);
+            eval = dec_mag(eval);
+            grid_unplay(grid, move);
+            
+            if (eval >= beta) { return beta; }
+            if (eval > alpha) { alpha = eval; best_move = move; }
+            if (eval >= EVAL_MAX - 1) { break; }
+        }
+
+        if (best_move_out) { *best_move_out = best_move; }
+        return alpha;
+    } else {
+        for (int move = 0; move < 7; move++) {
+            if (grid->tops[move] >= 6) { continue; }
+            
+            grid_play(grid, player, move);
+            int eval = minimax(grid, RED, EVAL_MIN - 1, inc_mag(beta), NULL);
+            eval = dec_mag(eval);
+            grid_unplay(grid, move);
+            
+            if (eval <= alpha) { return alpha; }
+            if (eval < beta) { beta = eval; best_move = move; }
+            if (eval <= EVAL_MIN + 1) { break; }
+        }
+        
+        if (best_move_out) { *best_move_out = best_move; }
+        return beta;
     }
 }
 
@@ -58,6 +106,12 @@ void grid_play(grid_t *grid, player_t player, int column) {
     bitgrid_t bit = row_col_to_bit(grid->tops[column]++, column);
     if (player == RED) { grid->red_grid |= bit; }
     else { grid->yellow_grid |= bit; }
+}
+
+void grid_unplay(grid_t *grid, int column) {
+    bitgrid_t inv_bit = ~row_col_to_bit(--grid->tops[column], column);
+    grid->red_grid &= inv_bit;
+    grid->yellow_grid &= inv_bit;
 }
 
 void generate_wins() {
@@ -97,7 +151,8 @@ void generate_wins() {
 }
 
 void print_grid(grid_t *grid) {
-    printf("\x1b[H\x1b[J\x1b[34m+---+---+---+---+---+---+---+\n");
+    printf("\x1b[H\x1b[J");
+    printf("\x1b[34m+---+---+---+---+---+---+---+\n");
 
     for (int row = 5; row >= 0; row--) {
         for (int col = 6; col >= 0; col--) {
@@ -122,4 +177,12 @@ void print_grid(grid_t *grid) {
 
 bitgrid_t row_col_to_bit(int row, int col) {
     return 1ull << row * 7 + col;
+}
+
+int inc_mag(int n) {
+    return n ? n > 0 ? n + 1 : n - 1 : n;
+}
+
+int dec_mag(int n) {
+    return n ? n > 0 ? n - 1 : n + 1 : n;
 }
