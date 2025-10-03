@@ -5,6 +5,7 @@
 #define EVAL_MAX 43
 #define EVAL_MIN -43
 
+// Represents positions in the game grid with bits
 typedef unsigned long long bitgrid_t;
 
 typedef enum {
@@ -15,11 +16,12 @@ typedef enum {
 } player_t;
 
 typedef struct {
-    bitgrid_t red_grid;
-    bitgrid_t yellow_grid;
-    int tops[7];
+    bitgrid_t red_grid;     // Red piece positions
+    bitgrid_t yellow_grid;  // Yellow piece positions
+    int tops[7];            // Bottom-up index of the top of each column
 } grid_t;
 
+// Every single way to win (all 4-in-a-row's)
 bitgrid_t wins[NUM_WINS];
 
 int grid_best_move(grid_t *grid, player_t player);
