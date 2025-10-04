@@ -1,6 +1,6 @@
 #include "connect-four.h"
 
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 long long calls = 0;
@@ -9,8 +9,6 @@ long long calls = 0;
 int main() {
     grid_t grid = {0};
     player_t winner;
-
-    generate_wins();
 
     while (1) {
         print_grid(&grid);
@@ -132,15 +130,38 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
 // Get the current winner, `DRAW`, or `NONE`
 player_t grid_get_winner(grid_t *grid) {
     // Check for wins
-    for (int i = 0; i < NUM_WINS; i++) {
-        if ((grid->red_grid & wins[i]) == wins[i]) { return RED; }
-        if ((grid->yellow_grid & wins[i]) == wins[i]) { return YELLOW; }
-    }
+    if (has_won(grid->red_grid)) { return RED; }
+	if (has_won(grid->yellow_grid)) { return YELLOW; }
 
     // Check for draw (grid full)
     if ((grid->red_grid | grid->yellow_grid) == BITGRID_FULL) { return DRAW; }
 
     return NONE;
+}
+
+// Given a player's bitgrid, determines if the player won
+int has_won(bitgrid_t player_grid) {
+	bitgrid_t bitmask;
+
+	// The extra 0 bit at the end of each row guards against wrap-arounds
+
+	// Horizontal (offset 1)
+	bitmask = player_grid & player_grid << 1;
+	if (bitmask & bitmask << 2) return 1;
+	
+	// Vertical (offset 8)
+	bitmask = player_grid & player_grid << 8;
+	if (bitmask & bitmask << 16) return 1;
+
+	// Diagonal UR (offset 7)
+	bitmask = player_grid & player_grid << 7;
+	if (bitmask & bitmask << 14) return 1;
+
+	// Diagonal UL (offset 9)
+	bitmask = player_grid & player_grid << 9;
+	if (bitmask & bitmask << 18) return 1;
+
+	return 0;
 }
 
 // Play a move given a column (right-to-left index)
@@ -155,48 +176,6 @@ void grid_unplay(grid_t *grid, int column) {
     bitgrid_t inverted_bit = ~row_col_to_bit(--grid->tops[column], column);
     grid->red_grid &= inverted_bit;
     grid->yellow_grid &= inverted_bit;
-}
-
-// Generate all the ways to win, stored in global `wins` variable
-void generate_wins() {
-    int index = 0;
-
-    // Horizontal
-    for (int row = 0; row < 6; row++) {
-        for (int col = 0; col < 4; col++) {
-            wins[index++] = row_col_to_bit(row, col + 0) |
-                            row_col_to_bit(row, col + 1) |
-                            row_col_to_bit(row, col + 2) |
-                            row_col_to_bit(row, col + 3) ;
-        }
-    }
-
-    // Vertical
-    for (int col = 0; col < 7; col++) {
-        for (int row = 0; row < 3; row++) {
-            wins[index++] = row_col_to_bit(row + 0, col) |
-                            row_col_to_bit(row + 1, col) |
-                            row_col_to_bit(row + 2, col) |
-                            row_col_to_bit(row + 3, col) ;
-        }
-    }
-
-    // Generate diagonal bitmasks
-    bitgrid_t diag_up_left = 0;
-    bitgrid_t diag_up_right = 0;
-    for (int i = 0; i < 4; i++) {
-        diag_up_left |= 1ull << i * 8;
-        diag_up_right |= 1ull << i * 6;
-    }
-
-    // Diagonal
-    // Each direction can start anywhere in a certain 3x4 box
-    for (int row = 0; row < 3; row++) {
-        for (int col = 0; col < 4; col++) {
-            wins[index++] = diag_up_left << row * 7 + col;
-            wins[index++] = diag_up_right << row * 7 + 6 - col;
-        }
-    }
 }
 
 // Clear the terminal and print the game grid with colors
@@ -232,16 +211,16 @@ void print_grid(grid_t *grid) {
 }
 
 // Returns a bitmask for a given row and col (0, 0 = bottom-right)
-bitgrid_t row_col_to_bit(int row, int col) {
-    return 1ull << row * 7 + col;
+static inline bitgrid_t row_col_to_bit(int row, int col) {
+    return 1ull << row * 8 + col;
 }
 
 // Increment the magnitude of a number
-int inc_mag(int n) {
+static inline int inc_mag(int n) {
     return n ? n > 0 ? n + 1 : n - 1 : n;
 }
 
 // Decrement the magnitude of a number
-int dec_mag(int n) {
+static inline int dec_mag(int n) {
     return n ? n > 0 ? n - 1 : n + 1 : n;
 }
