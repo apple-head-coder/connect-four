@@ -1,6 +1,6 @@
 #include "connect-four.h"
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 long long calls = 0;
@@ -97,7 +97,7 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
             int eval = minimax(grid, YELLOW, alpha, beta, NULL);
             grid_unplay(grid, move);
 
-            if (eval >= beta) { return beta; }  // prune if alpha >= beta before updating alpha
+            if (eval >= beta) { return dec_mag(beta); }  // prune if alpha >= beta before updating alpha
             if (eval > alpha) {
                 // Take note if best one so far
                 alpha = eval;
@@ -118,7 +118,7 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
             int eval = minimax(grid, RED, alpha, beta, NULL);
             grid_unplay(grid, move);
             
-            if (eval <= alpha) { return alpha; }
+            if (eval <= alpha) { return dec_mag(alpha); }
             if (eval < beta) {
                 beta = eval;
                 best_move = move;
