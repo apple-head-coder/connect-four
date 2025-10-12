@@ -24,9 +24,11 @@ int grid_best_move(grid_t *grid, player_t player);
 
 int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_out);
 
-player_t grid_get_winner(grid_t *grid, player_t next_player);
+player_t grid_get_winner(grid_t *grid);
 
 static inline int has_won(bitgrid_t player_grid);
+
+static inline int has_drawn(bitgrid_t red_grid, bitgrid_t yellow_grid);
 
 void grid_play(grid_t *grid, player_t player, int column);
 

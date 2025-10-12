@@ -2,10 +2,6 @@
 
 // #define DEBUG
 
-#ifdef DEBUG
-long long calls = 0;
-#endif
-
 int main() {
     grid_t grid = {0};
     player_t winner;
@@ -17,7 +13,7 @@ int main() {
         printf("Enter column number: ");
         scanf("%d", &player_move);
         grid_play(&grid, RED, 7 - player_move);
-        winner = grid_get_winner(&grid, YELLOW);
+        winner = grid_get_winner(&grid);
         if (winner == RED) {
             print_grid(&grid);
             printf("YOU WIN\n");
@@ -26,7 +22,7 @@ int main() {
 
         int computer_move = grid_best_move(&grid, YELLOW);
         grid_play(&grid, YELLOW, computer_move);
-        winner = grid_get_winner(&grid, RED);
+        winner = grid_get_winner(&grid);
         if (winner == YELLOW) {
             print_grid(&grid);
             printf("YOU LOSE\n");
@@ -70,15 +66,9 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
      */
 
     #ifdef DEBUG
-    if (++calls % 100000000ll == 0ll) { printf("minimax calls: %lld\n", calls); print_grid(grid); }
+    static long long calls = 0;
+    if (++calls % 500000000ll == 0ll) { printf("minimax calls: %lld\n", calls); print_grid(grid); }
     #endif
-
-    // Check for game over
-    switch (grid_get_winner(grid, player)) {
-        case RED: return EVAL_MAX;
-        case YELLOW: return EVAL_MIN;
-        case DRAW: return 0;
-    }
 
     int best_move;
     
@@ -87,13 +77,29 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
     beta = inc_mag(beta);
 
     if (player == RED) {
-        for (int move = 0; move < 7; move++) {
-            if (alpha >= EVAL_MAX) { break; }  // stop if cannot improve alpha
+        if (alpha >= EVAL_MAX) { return EVAL_MAX - 1; }  // stop if cannot improve alpha
 
-            if (grid->tops[move] >= 6) { continue; }  // ignore invalid mvoes
+        for (int move = 0; move < 7; move++) {
+            // Win detection will be run for each move anyways, run in the parent instead
+
+            if (grid->tops[move] >= 6) { continue; }  // ignore invalid moves
+
+            // Try the move & check for game over
+            grid_play(grid, RED, move);
+            if (has_won(grid->red_grid)) {
+                // Found winning move - don't need to search further
+                grid_unplay(grid, move);
+                if (best_move_out) { *best_move_out = move; }
+                return EVAL_MAX - 1;
+            }
+            grid_unplay(grid, move);
+        }
+
+        for (int move = 0; move < 7; move++) {
+            if (grid->tops[move] >= 6) { continue; }  // ignore invalid moves
 
             // Try the move & evaluate
-            grid_play(grid, player, move);
+            grid_play(grid, RED, move);
             int eval = minimax(grid, YELLOW, alpha, beta, NULL);
             grid_unplay(grid, move);
 
@@ -109,9 +115,26 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
         return dec_mag(alpha);  // encourage faster wins and slower losses
     } else {
         // Same thing as yellow but reversed
-        for (int move = 0; move < 7; move++) {
-            if (beta <= EVAL_MIN) { break; }
+        if (beta <= EVAL_MIN) { return EVAL_MIN + 1; }
 
+        for (int move = 0; move < 7; move++) {
+            if (grid->tops[move] >= 6) { continue; }
+
+            grid_play(grid, YELLOW, move);
+            if (has_won(grid->yellow_grid)) {
+                grid_unplay(grid, move);
+                if (best_move_out) { *best_move_out = move; }
+                return EVAL_MIN + 1;
+            } else if (has_drawn(grid->red_grid, grid->yellow_grid)) {
+                // Draw means it's the only move - can return early
+                grid_unplay(grid, move);
+                if (best_move_out) { *best_move_out = move; }
+                return 0;
+            }
+            grid_unplay(grid, move);
+        }
+
+        for (int move = 0; move < 7; move++) {
             if (grid->tops[move] >= 6) { continue; }
 
             grid_play(grid, player, move);
@@ -131,20 +154,11 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
 }
 
 // Get the current winner, `DRAW`, or `NONE`
-player_t grid_get_winner(grid_t *grid, player_t next_player) {
-    if (next_player == RED) {
-        // Only yellow could have won
-        if (has_won(grid->yellow_grid)) { return YELLOW; }
-
-        if ((grid->red_grid | grid->yellow_grid) == BITGRID_FULL) { return DRAW; }
-
-        return NONE;
-    } else {
-        // Only red could have won
-        if (has_won(grid->red_grid)) { return RED; }
-
-        return NONE;
-    }
+player_t grid_get_winner(grid_t *grid) {
+    if (has_won(grid->red_grid)) { return RED; }
+    if (has_won(grid->yellow_grid)) { return YELLOW; }
+    if (has_drawn(grid->red_grid, grid->yellow_grid)) { return DRAW; }
+    return NONE;
 }
 
 // Given a player's bitgrid, determines if the player won
@@ -171,6 +185,11 @@ static inline int has_won(bitgrid_t player_grid) {
 	if (bitmask & bitmask << 18) return 1;
 
 	return 0;
+}
+
+// Given both players' bitgrids, determines if there is a draw
+static inline int has_drawn(bitgrid_t red_grid, bitgrid_t yellow_grid) {
+    return (red_grid | yellow_grid) == BITGRID_FULL;
 }
 
 // Play a move given a column (right-to-left index)
