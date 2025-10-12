@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 #define BITGRID_FULL 0x7f7f7f7f7f7full
 #define EVAL_MAX 43
@@ -20,6 +21,8 @@ typedef struct {
     int tops[7];            // Bottom-up index of the top of each column
 } grid_t;
 
+const int search_move_order[7] = {3, 2, 4, 1, 5, 0, 6};
+
 int grid_best_move(grid_t *grid, player_t player);
 
 int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_out);
@@ -30,9 +33,9 @@ static inline int has_won(bitgrid_t player_grid);
 
 static inline int has_drawn(bitgrid_t red_grid, bitgrid_t yellow_grid);
 
-void grid_play(grid_t *grid, player_t player, int column);
+static inline void grid_play(grid_t *grid, player_t player, int column);
 
-void grid_unplay(grid_t *grid, int column);
+static inline void grid_unplay(grid_t *grid, int column);
 
 void print_grid(grid_t *grid);
 

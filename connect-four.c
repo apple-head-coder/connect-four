@@ -1,6 +1,6 @@
 #include "connect-four.h"
 
-// #define DEBUG
+#define DEBUG
 
 int main() {
     grid_t grid = {0};
@@ -95,7 +95,9 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
             grid_unplay(grid, move);
         }
 
-        for (int move = 0; move < 7; move++) {
+        for (int i = 0; i < 7; i++) {
+            int move = search_move_order[i];  // consider central moves first - more alpha-beta pruning
+
             if (grid->tops[move] >= 6) { continue; }  // ignore invalid moves
 
             // Try the move & evaluate
@@ -134,7 +136,9 @@ int minimax(grid_t *grid, player_t player, int alpha, int beta, int *best_move_o
             grid_unplay(grid, move);
         }
 
-        for (int move = 0; move < 7; move++) {
+        for (int i = 0; i < 7; i++) {
+            int move = search_move_order[i];
+
             if (grid->tops[move] >= 6) { continue; }
 
             grid_play(grid, player, move);
@@ -193,14 +197,14 @@ static inline int has_drawn(bitgrid_t red_grid, bitgrid_t yellow_grid) {
 }
 
 // Play a move given a column (right-to-left index)
-void grid_play(grid_t *grid, player_t player, int column) {
+static inline void grid_play(grid_t *grid, player_t player, int column) {
     bitgrid_t bit = row_col_to_bit(grid->tops[column]++, column);
     if (player == RED) { grid->red_grid |= bit; }
     else { grid->yellow_grid |= bit; }
 }
 
 // Unplay a move given a column (right-to-left index)
-void grid_unplay(grid_t *grid, int column) {
+static inline void grid_unplay(grid_t *grid, int column) {
     bitgrid_t inverted_bit = ~row_col_to_bit(--grid->tops[column], column);
     grid->red_grid &= inverted_bit;
     grid->yellow_grid &= inverted_bit;
